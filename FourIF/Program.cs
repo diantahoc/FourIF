@@ -17,17 +17,127 @@ namespace FourIF
 
         static void Main(string[] args)
         {
-
             Console.Title = "4chan image filer - FourIF";
 
+            if (args.Length == 0)
+            {
+                Console.WriteLine("Usage: fourif --inputfile [--decode] [--outputfile] [--minres] [--maxres] --c");
+                Console.WriteLine("Example: fourif --i:somefile.zip --o:output.png --minres10 --maxres500");
+                Console.WriteLine("---------");
+
+                Console.WriteLine("Definitions:");
+                Console.WriteLine("- [--inputfile] is the path of the file you which to encode. Mandatory");
+
+                Console.WriteLine("- Specify [--decode] to decode the input file. Optional.");
+
+                Console.WriteLine("- Specify [--c] to not overwrite existing files. Optional.");
+
+                Console.WriteLine("- If [--outputfile] is not specified, encoded file will be placed in the\n same directory "
+                                  + " as the input file such as 'inputfile_encoded.png'.");
+                Console.WriteLine("- [minres] is the minimum image resolution. Optional");
+                Console.WriteLine("- [maxres] is the maximum image resolution. Optional");
+                Console.WriteLine("- Use [minres] and [maxres] to override the defaults,\n"
+                               + "  (1000 for the [minres], and 10,000 for [maxres])");
+            }
+            else 
+            {
+                if (args[0] == "--oldmode")
+                {
+                    old_mode();
+                }
+                else 
+                {
+                    string input_file = "";
+                    string output_file = "";
+
+                    bool decode = false;
+                    bool check = false;
+
+                    foreach (string arg in args) 
+                    {
+                        if (arg == "--decode") 
+                        {
+                            decode = true;
+                        }
+
+                        if (arg.StartsWith("--minres"))
+                        {
+                            min_res = Convert.ToInt32(arg.Replace("--minres",""));
+                        }
+
+                        if (arg.StartsWith("--maxres"))
+                        {
+                            min_res = Convert.ToInt32(arg.Replace("--maxres", ""));
+                        }
+
+                        if (arg.StartsWith("--i:"))
+                        {
+                            input_file = arg.Remove(0,4);
+                        }
+
+                        if (arg.StartsWith("--o:"))
+                        {
+                            output_file = arg.Remove(0, 4);
+                        }
+
+                        if (arg == "--c") { check = true; }
+                    }
+
+                    if (!File.Exists(input_file)) 
+                    {
+                        Console.WriteLine("Input file does not exist!, exiting");
+                        return;
+                    }
+
+                    if (decode)
+                    {
+                        byte[] input_data = File.ReadAllBytes(input_file);
+
+                        if (output_file == "") { output_file = input_file + "_decoded"; }
+
+                        if (File.Exists(output_file) && check)
+                        {
+                            Console.WriteLine("Output file already exist, exiting");
+                            return;
+                        }
+
+                        File.WriteAllBytes(output_file, decode_file(input_data));
+                    }
+                    else 
+                    {
+                        if (output_file == "") { output_file = input_file + "_encoded.png"; }
+
+                        if (File.Exists(output_file) && check) 
+                        {
+                            Console.WriteLine("Output file already exist, exiting");
+                            return;
+                        }
+
+                        File.WriteAllBytes(output_file, encode_file(File.ReadAllBytes(input_file)));
+                    }
+                }
+            }
+        }
+
+        private static string get_arg(string[] args, int index) 
+        { 
+            if (args.Length - 1 < index) 
+            {
+                return "";
+            }
+            else 
+            { 
+                return args[index];
+            } 
+        }
+
+        private static void old_mode() 
+        {
             Console.BackgroundColor = ConsoleColor.White;
             Console.ForegroundColor = ConsoleColor.Black;
+            Console.Clear();
 
-
-            bool exit = true;
-
-
-            while (exit) 
+            while (true)
             {
                 Console.Clear();
 
@@ -40,11 +150,11 @@ namespace FourIF
                 Console.WriteLine("------------------------------------");
 
                 Console.WriteLine(String.Format("Maximum file size is: {0} (limited by maximum image resolution)", FormatSize(max_res * max_res * 4)));
-             
+
 
                 int action = Convert.ToInt32(prompt("Select action number:"));
 
-                switch (action) 
+                switch (action)
                 {
                     case 1:
                         int new_z = Convert.ToInt32(prompt("Enter new minimum image resolution:"));
@@ -61,34 +171,34 @@ namespace FourIF
                         break;
                     case 3:
                         string file_name = prompt("Enter file path:").Replace(@"""", String.Empty);
-                sp:
+                    sp:
                         string save_path = prompt("Enter save path (Leave empty to append '_encoded'):").Replace(@"""", String.Empty);
 
                         if (save_path == "") { save_path = file_name + "_encoded.png"; }
 
-                        if (System.IO.File.Exists(save_path)) 
+                        if (System.IO.File.Exists(save_path))
                         {
                             Console.WriteLine("The provided save path exist already");
                             string response = prompt("Overwrite ? Y/N").ToLower();
-                            if (!response.StartsWith("y")) 
+                            if (!response.StartsWith("y"))
                             {
                                 goto sp;
                             }
                         }
-                       
+
                         byte[] encoded_data = encode_file(System.IO.File.ReadAllBytes(file_name));
                         System.IO.File.WriteAllBytes(save_path, encoded_data);
                         break;
                     case 4:
-                        string encoded_file_path = prompt("Enter encoded file path").Replace(@"""","");
+                        string encoded_file_path = prompt("Enter encoded file path").Replace(@"""", "");
                         if (File.Exists(encoded_file_path))
                         {
-                            string decoded_file_path = prompt("Enter save path").Replace(@"""","");
-                            
+                            string decoded_file_path = prompt("Enter save path").Replace(@"""", "");
+
                             File.WriteAllBytes(decoded_file_path, decode_file(File.ReadAllBytes(encoded_file_path)));
                             break;
                         }
-                        else 
+                        else
                         {
                             Console.WriteLine("This file does not exist!");
                             break;
@@ -100,7 +210,6 @@ namespace FourIF
             }
         }
 
-
         private static byte[] decode_file(byte[] data) 
         {
             MemoryStream image_stream = new MemoryStream();
@@ -109,7 +218,16 @@ namespace FourIF
 
             image_stream.Write(data, 0, data.Length-1);
 
-            Image im = Image.FromStream(image_stream);
+            Image im = null;
+            try
+            {
+               im =  Image.FromStream(image_stream);
+            }
+            catch (Exception)
+            {
+                throw new Exception("Bad image data");
+            }
+               
 
             FastBitmap fb = new FastBitmap((Bitmap)im);
            
@@ -141,19 +259,6 @@ namespace FourIF
                     x = 0;
                 }
             }
-
-            //for (y = 0; y < im.Height; y++) 
-            //{
-            //    for (x = 2; x < im.Width; x++) 
-            //    {
-            //        if (prog_c > completed_f) { x--; break; }
-                    
-                  
-
-            //        prog_c++;
-            //    }
-            //    if (prog_c > completed_f) { break; }
-            //}
 
             int rem = Convert.ToInt32(fb.GetPixel(1, 0).A);
 
