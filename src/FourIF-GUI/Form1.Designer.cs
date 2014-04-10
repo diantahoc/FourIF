@@ -34,10 +34,10 @@
             this.label2 = new System.Windows.Forms.Label();
             this.label1 = new System.Windows.Forms.Label();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
-            this.maxX = new System.Windows.Forms.MaskedTextBox();
-            this.label5 = new System.Windows.Forms.Label();
-            this.label3 = new System.Windows.Forms.Label();
             this.label4 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label5 = new System.Windows.Forms.Label();
+            this.maxX = new System.Windows.Forms.MaskedTextBox();
             this.groupBox1.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -109,15 +109,23 @@
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Settings";
             // 
-            // maxX
+            // label4
             // 
-            this.maxX.Location = new System.Drawing.Point(141, 79);
-            this.maxX.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.maxX.Mask = "00000";
-            this.maxX.Name = "maxX";
-            this.maxX.Size = new System.Drawing.Size(62, 25);
-            this.maxX.TabIndex = 1;
-            this.maxX.ValidatingType = typeof(int);
+            this.label4.AutoSize = true;
+            this.label4.Location = new System.Drawing.Point(209, 82);
+            this.label4.Name = "label4";
+            this.label4.Size = new System.Drawing.Size(43, 17);
+            this.label4.TabIndex = 4;
+            this.label4.Text = "label3";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(209, 38);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(43, 17);
+            this.label3.TabIndex = 4;
+            this.label3.Text = "label3";
             // 
             // label5
             // 
@@ -129,23 +137,15 @@
             this.label5.TabIndex = 3;
             this.label5.Text = "label5";
             // 
-            // label3
+            // maxX
             // 
-            this.label3.AutoSize = true;
-            this.label3.Location = new System.Drawing.Point(209, 38);
-            this.label3.Name = "label3";
-            this.label3.Size = new System.Drawing.Size(43, 17);
-            this.label3.TabIndex = 4;
-            this.label3.Text = "label3";
-            // 
-            // label4
-            // 
-            this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(209, 82);
-            this.label4.Name = "label4";
-            this.label4.Size = new System.Drawing.Size(43, 17);
-            this.label4.TabIndex = 4;
-            this.label4.Text = "label3";
+            this.maxX.Location = new System.Drawing.Point(141, 79);
+            this.maxX.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.maxX.Mask = "00000";
+            this.maxX.Name = "maxX";
+            this.maxX.Size = new System.Drawing.Size(62, 25);
+            this.maxX.TabIndex = 1;
+            this.maxX.ValidatingType = typeof(int);
             // 
             // Form1
             // 
@@ -159,7 +159,7 @@
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "4chan image filer - FourIF";
+            this.Text = "FourIF GUI";
             this.groupBox1.ResumeLayout(false);
             this.groupBox1.PerformLayout();
             this.ResumeLayout(false);
