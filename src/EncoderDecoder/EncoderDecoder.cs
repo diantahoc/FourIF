@@ -8,9 +8,17 @@ using System.Drawing.Imaging;
 
 namespace FourIF
 {
+    public struct DecodeResult
+    {
+        public byte[] Data;
+        public string FileName;
+        public string Extension;
+        public string MD5;
+    }
+
     public class EncoderDecoder
     {
-        const int FourIF_Version = 2;
+        public int FourIF_Version { get { return 3; } }
 
         public int MinimumResolution { get; set; }
         public int MaximumResolution { get; set; }
@@ -21,9 +29,16 @@ namespace FourIF
             this.MaximumResolution = 10000;
         }
 
-        public byte[] EncodeFile(byte[] data, string fileextension)
+        //Copy constructor
+        public EncoderDecoder(EncoderDecoder prev)
         {
-            int ideal_size = Convert.ToInt32(Math.Sqrt(data.Length / 4)) + 4;
+            this.MinimumResolution = 10;
+            this.MaximumResolution = 10000;
+        }
+
+        public byte[] EncodeFile(byte[] data, FileInfo fi)
+        {
+            int ideal_size = Convert.ToInt32(Math.Sqrt(data.Length / 4)) + 60;
             int needed_res = 0;
 
             if (ideal_size > MaximumResolution - 1)
@@ -50,16 +65,36 @@ namespace FourIF
             int rem = 0;
 
             //[0]: FourIF version
-            //[1]: File Extension
-            //[2]: Completed 4
-            //[3]: Helper
+            //[1][2]: File Extension
+            //[3..66]: File name
+            //[67]: Completed 4
+            //[68]: Helper
 
-            //Data start at x = 4
-            int x = 4;
+            //Data start at x = 69
+            int x = 69;
             int y = 0;
 
+            //Save version info
             fb.SetPixel(0, 0, IntToColor(FourIF_Version));
-            fb.SetPixel(1, 0, StringToColor(fileextension));
+
+            //Save file extension
+            Color[] file_extension = StringToPixels(fi.Extension.Remove(0, 1), 8);
+            fb.SetPixel(1, 0, file_extension[0]);
+            fb.SetPixel(2, 0, file_extension[0]);
+
+            //Save file name. Maximum file name is 256 character
+
+            string file_name = fi.Name.Remove(fi.Name.LastIndexOf('.'));
+
+            Color[] file_name_data = StringToPixels(file_name, 256);
+
+            int last = 0;
+
+            for (int i = 0; i < 64; i++)
+            {
+                last = 3 + i;
+                fb.SetPixel(3 + i, 0, file_name_data[i]);
+            }
 
             List<byte> buffer = new List<byte>(4);
 
@@ -102,12 +137,12 @@ namespace FourIF
             }
 
             //Set the number of 4bytes chunks
-            fb.SetPixel(2, 0, IntToColor(completed_four));
+            fb.SetPixel(67, 0, IntToColor(completed_four));
 
             //How many individual bytes pixels
             Color helper = Color.FromArgb(rem, 0, 0, 0);
 
-            fb.SetPixel(3, 0, helper);
+            fb.SetPixel(68, 0, helper);
 
             fb.UnlockImage();
 
@@ -121,7 +156,7 @@ namespace FourIF
             return result;
         }
 
-        public KeyValuePair<string, byte[]> DecodeFile(byte[] data)
+        public DecodeResult DecodeFile(byte[] data)
         {
             MemoryStream image_stream = new MemoryStream();
 
@@ -147,53 +182,126 @@ namespace FourIF
 
             int FourIFEncoderVersion = ColorToInt(fb.GetPixel(0, 0));
 
-            string FileExtension = ColorToString(fb.GetPixel(1, 0));
+            #region FourIF Version 2 Decoder
 
-            FileExtension = FileExtension.TrimEnd();
-
-            int Completed4 = ColorToInt(fb.GetPixel(2, 0));
-
-            int RemainingIndiviual = Convert.ToInt32(fb.GetPixel(3, 0).A);
-
-            int prog_c = 0;
-
-            int y = 0;
-            int x = 4;
-
-            for (prog_c = 0; prog_c != Completed4; prog_c++)
+            if (FourIFEncoderVersion == 2)
             {
-                Color a = fb.GetPixel(x, y);
+                string FileExtension = ColorToString(fb.GetPixel(1, 0));
 
-                temp_s.WriteByte(a.A);
-                temp_s.WriteByte(a.R);
-                temp_s.WriteByte(a.G);
-                temp_s.WriteByte(a.B);
+                FileExtension = FileExtension.TrimEnd();
 
-                x++;
-                if (x >= im.Width)
+                int Completed4 = ColorToInt(fb.GetPixel(2, 0));
+
+                int RemainingIndiviual = Convert.ToInt32(fb.GetPixel(3, 0).A);
+
+                int prog_c = 0;
+
+                int y = 0;
+                int x = 4;
+
+                for (prog_c = 0; prog_c != Completed4; prog_c++)
                 {
-                    y++;
-                    x = 0;
+                    Color a = fb.GetPixel(x, y);
+
+                    temp_s.WriteByte(a.A);
+                    temp_s.WriteByte(a.R);
+                    temp_s.WriteByte(a.G);
+                    temp_s.WriteByte(a.B);
+
+                    x++;
+                    if (x >= im.Width)
+                    {
+                        y++;
+                        x = 0;
+                    }
                 }
+
+                for (; RemainingIndiviual > 0; RemainingIndiviual--)
+                {
+                    temp_s.WriteByte(fb.GetPixel(x, y).B);
+                    x++;
+                }
+
+                fb.UnlockImage();
+
+                im.Dispose();
+
+                image_stream.Close();
+                image_stream.Dispose();
+
+                byte[] result = temp_s.ToArray();
+                temp_s.Dispose();
+
+                return new DecodeResult() { Data = result, Extension = FileExtension };
             }
 
-            for (; RemainingIndiviual > 0; RemainingIndiviual--)
+            #endregion
+
+            if (FourIFEncoderVersion == 3)
             {
-                temp_s.WriteByte(fb.GetPixel(x, y).B);
-                x++;
+                DecodeResult dr = new DecodeResult();
+
+                dr.Extension = PixelsToString(new Color[] { fb.GetPixel(1, 0), fb.GetPixel(2, 0) });
+
+                List<Color> file_name_buffer = new List<Color>(64);
+                for (int i = 3; i < 67; i++) 
+                {
+                    file_name_buffer.Add(fb.GetPixel(i, 0));
+                }
+
+                dr.FileName = PixelsToString(file_name_buffer.ToArray());
+
+                int Completed4 = ColorToInt(fb.GetPixel(67, 0));
+
+                int RemainingIndiviual = Convert.ToInt32(fb.GetPixel(68, 0).A);
+
+                int prog_c = 0;
+
+                int y = 0;
+                int x = 69;
+
+                for (prog_c = 0; prog_c != Completed4; prog_c++)
+                {
+                    Color a = fb.GetPixel(x, y);
+
+                    temp_s.WriteByte(a.A);
+                    temp_s.WriteByte(a.R);
+                    temp_s.WriteByte(a.G);
+                    temp_s.WriteByte(a.B);
+
+                    x++;
+                    if (x >= im.Width)
+                    {
+                        y++;
+                        x = 0;
+                    }
+                }
+
+                for (; RemainingIndiviual > 0; RemainingIndiviual--)
+                {
+                    temp_s.WriteByte(fb.GetPixel(x, y).B);
+                    x++;
+                }
+
+                fb.UnlockImage();
+
+                im.Dispose();
+
+                image_stream.Close();
+                image_stream.Dispose();
+
+                dr.Data = temp_s.ToArray();
+                temp_s.Dispose();
+
+                return dr;
             }
 
             fb.UnlockImage();
-
             im.Dispose();
-
-            image_stream.Close();
             image_stream.Dispose();
-
-            byte[] result = temp_s.ToArray();
             temp_s.Dispose();
 
-            return new KeyValuePair<string, byte[]>(FileExtension, result);
+            return new DecodeResult();
         }
 
         private Color IntToColor(int i)
@@ -239,5 +347,51 @@ namespace FourIF
             b[3] = c.B;
             return Encoding.UTF8.GetString(b);
         }
+
+        public Color[] StringToPixels(string s, int maxlength)
+        {
+            if (maxlength % 4 != 0) { throw new Exception("Maxlength must be a multiple of 4"); }
+
+            Color[] colors = new Color[maxlength / 4];
+
+            byte[] data = new byte[maxlength];
+
+            for (int i = 0; i < data.Length; i++)
+            {
+                try
+                {
+                    data[i] = Convert.ToByte(s[i]);
+                }
+                catch (IndexOutOfRangeException) { break; }
+            }
+
+            for (int i = 0; i < colors.Length; i++)
+            {
+                byte a = data[0 + (i * 4)];
+                byte r = data[1 + (i * 4)];
+                byte g = data[2 + (i * 4)];
+                byte b = data[3 + (i * 4)];
+
+                colors[i] = Color.FromArgb(a, r, g, b);
+            }
+
+            return colors;
+        }
+
+        public string PixelsToString(Color[] colors)
+        {
+            List<byte> data = new List<byte>(colors.Length * 4);
+
+            foreach (var c in colors)
+            {
+                data.Add(c.A);
+                data.Add(c.R);
+                data.Add(c.G);
+                data.Add(c.B);
+            }
+
+            return Encoding.UTF8.GetString(data.ToArray(), 0, data.IndexOf(0x0));
+        }
+
     }
 }

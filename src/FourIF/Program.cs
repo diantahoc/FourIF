@@ -93,7 +93,30 @@ namespace FourIF
                     {
                         byte[] input_data = File.ReadAllBytes(input_file);
 
-                        if (output_file == "") { output_file = input_file + "_decoded"; }
+                        string save_dir = Path.GetDirectoryName(input_file);
+                        Directory.CreateDirectory(save_dir);
+
+                        EncoderDecoder ed = new EncoderDecoder() { MinimumResolution = min_res, MaximumResolution = max_res };
+
+                        DecodeResult res = ed.DecodeFile(input_data);
+
+                        if (res.Data == null)
+                        {
+                            Console.WriteLine("Unable to decode file");
+                            return;
+                        }
+
+                        if (string.IsNullOrEmpty(output_file))
+                        {
+                            if (string.IsNullOrEmpty(res.FileName))
+                            {
+                                output_file = input_file + "_decoded." + res.Extension;
+                            }
+                            else
+                            {
+                                output_file = Path.Combine(save_dir, res.FileName + "." + res.Extension);
+                            }
+                        }
 
                         if (File.Exists(output_file) && check)
                         {
@@ -101,13 +124,7 @@ namespace FourIF
                             return;
                         }
 
-                        EncoderDecoder ed = new EncoderDecoder() { MinimumResolution = min_res, MaximumResolution = max_res };
-
-                        var res = ed.DecodeFile(input_data);
-
-                        output_file = output_file + res.Key;
-
-                        File.WriteAllBytes(output_file, res.Value);
+                        File.WriteAllBytes(output_file, res.Data);
                     }
                     else
                     {
@@ -123,7 +140,7 @@ namespace FourIF
 
                         EncoderDecoder ed = new EncoderDecoder() { MinimumResolution = min_res, MaximumResolution = max_res };
 
-                        File.WriteAllBytes(output_file, ed.EncodeFile(File.ReadAllBytes(input_file), fi.Extension.Replace(".", ""))); 
+                        File.WriteAllBytes(output_file, ed.EncodeFile(File.ReadAllBytes(input_file), fi));
                     }
                 }
             }
@@ -209,36 +226,45 @@ namespace FourIF
 
                             FileInfo fi = new FileInfo(file_name);
 
-                            byte[] encoded_data = ed.EncodeFile(File.ReadAllBytes(fi.FullName), fi.Extension.Replace(".", ""));
+                            byte[] encoded_data = ed.EncodeFile(File.ReadAllBytes(fi.FullName), fi);
                             System.IO.File.WriteAllBytes(save_path, encoded_data);
                         } break;
                     case 4:
                         {
                             string encoded_file_path = prompt("Enter encoded file path").Replace(@"""", "");
-                            if (File.Exists(encoded_file_path))
+                            FileInfo fi = new FileInfo(encoded_file_path);
+                            if (fi.Exists)
                             {
                                 string save_dir = prompt("Enter save path (a directory)").Replace(@"""", "");
 
-                                if (Directory.Exists(save_dir))
+                                Directory.CreateDirectory(save_dir);
+
+                                EncoderDecoder ed = new EncoderDecoder()
                                 {
-                                    EncoderDecoder ed = new EncoderDecoder()
-                                    {
-                                        MaximumResolution = max_res,
-                                        MinimumResolution = min_res
-                                    };
+                                    MaximumResolution = max_res,
+                                    MinimumResolution = min_res
+                                };
 
-                                    KeyValuePair<string, byte[]> results = ed.DecodeFile(File.ReadAllBytes(encoded_file_path));
+                                DecodeResult result = ed.DecodeFile(File.ReadAllBytes(encoded_file_path));
 
-                                    FileInfo fi = new FileInfo(encoded_file_path);
+                                if (result.Data == null)
+                                {
+                                    Console.WriteLine("Unable to decode file");
+                                }
 
-                                    string decoded_file_path = Path.Combine(save_dir, string.Format("{0}.{1}", fi.Name.Split('.').First(), results.Key));
+                                string decoded_file_path = null;
 
-                                    File.WriteAllBytes(decoded_file_path, results.Value);
+                                if (string.IsNullOrWhiteSpace(result.FileName))
+                                {
+                                    decoded_file_path = Path.Combine(save_dir, string.Format("{0}.{1}", fi.Name.Remove(fi.Name.LastIndexOf('.')), result.Extension));
                                 }
                                 else
                                 {
-                                    Console.WriteLine("Invalid save dir");
+                                    decoded_file_path = Path.Combine(save_dir, string.Format("{0}.{1}", result.FileName, result.Extension));
                                 }
+
+                                File.WriteAllBytes(decoded_file_path, result.Data);
+
                                 break;
                             }
                             else
@@ -248,7 +274,7 @@ namespace FourIF
                             }
                         }
                     default:
-                        Console.WriteLine("Unknown command");
+                        Console.WriteLine("Unkown command");
                         break;
                 }
             }

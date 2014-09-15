@@ -87,7 +87,7 @@ namespace FourIF_GUI
                     byte[] data = System.IO.File.ReadAllBytes(ofd.FileName);
                     try
                     {
-                        byte[] encoded = ed.EncodeFile(data, fi.Extension.Replace(".", ""));
+                        byte[] encoded = ed.EncodeFile(data, fi);
 
                         using (SaveFileDialog sfd = new SaveFileDialog())
                         {
@@ -120,14 +120,23 @@ namespace FourIF_GUI
                     byte[] data = System.IO.File.ReadAllBytes(ofd.FileName);
                     try
                     {
-                        KeyValuePair<string, byte[]> res = ed.DecodeFile(data);
+                        DecodeResult dr = ed.DecodeFile(data);
+
+                        if (dr.Data == null)
+                        {
+                            MessageBox.Show("Unable to decode file");
+                            return;
+                        }
+
                         using (SaveFileDialog sfd = new SaveFileDialog())
                         {
                             sfd.OverwritePrompt = true;
-                            sfd.Filter = "Decoded file|*." + res.Key;
+                            sfd.Filter = "Decoded file|*." + dr.Extension;
+                            if (!string.IsNullOrWhiteSpace(dr.FileName)) { sfd.FileName = dr.FileName; }
+
                             if (sfd.ShowDialog() == System.Windows.Forms.DialogResult.OK)
                             {
-                                System.IO.File.WriteAllBytes(sfd.FileName, res.Value);
+                                System.IO.File.WriteAllBytes(sfd.FileName, dr.Data);
                             }
                         }
                     }
@@ -138,6 +147,5 @@ namespace FourIF_GUI
                 }
             }
         }
-
     }
 }
