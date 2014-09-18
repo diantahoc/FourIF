@@ -21,8 +21,8 @@ namespace FourIF_GUI
             set_value(ed.MinimumResolution, true);
             set_value(ed.MaximumResolution, false);
             update_size_info();
-            minX.TextChanged += maxX_TextChanged;
-            maxX.TextChanged += maxX_TextChanged;
+            minX.LostFocus += maxX_TextChanged;
+            maxX.LostFocus += maxX_TextChanged;
         }
 
         private void maxX_TextChanged(object sender, EventArgs e)
@@ -56,21 +56,26 @@ namespace FourIF_GUI
 
             if (min > max)
             {
-                MessageBox.Show("Minimum resolution cannot be larger than the maximum resolution");
+                //MessageBox.Show("Minimum resolution cannot be larger than the maximum resolution");
+                min = max;
             }
             else if (max > 10000)
             {
-                MessageBox.Show("Maximum resolution cannot be larger than 10000");
+                //MessageBox.Show("Maximum resolution cannot be larger than 10000");
+                max = 10000;
             }
             else if (min <= 0)
             {
-                MessageBox.Show("Minimum resolution cannot be less or equal to 0");
+               // MessageBox.Show("Minimum resolution cannot be less or equal to 0");
+                min = 1;
             }
-            else
-            {
-                ed.MinimumResolution = min;
-                ed.MaximumResolution = max;
-            }
+
+
+            minX.Text = min.ToString();
+            maxX.Text = max.ToString();
+
+            ed.MinimumResolution = min;
+            ed.MaximumResolution = max;
 
             update_size_info();
         }
@@ -126,6 +131,16 @@ namespace FourIF_GUI
                         {
                             MessageBox.Show("Unable to decode file");
                             return;
+                        }
+
+                        if (!dr.DataValid)
+                        {
+                            if (MessageBox.Show("File was decoded, but md5 checksum has failed. Do you still want to save the data?",
+                                "MD5 check failed", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == System.Windows.Forms.DialogResult.No)
+                            {
+                                return;
+                            }
+
                         }
 
                         using (SaveFileDialog sfd = new SaveFileDialog())

@@ -8,17 +8,19 @@ using System.Drawing.Imaging;
 
 namespace FourIF
 {
-    public struct DecodeResult
+    public class DecodeResult
     {
         public byte[] Data;
         public string FileName;
         public string Extension;
         public string MD5;
+        public byte[] MD5_Bytes;
+        public bool DataValid = true;
     }
 
     public class EncoderDecoder
     {
-        public int FourIF_Version { get { return 3; } }
+        public int FourIF_Version { get { return 4; } }
 
         public int MinimumResolution { get; set; }
         public int MaximumResolution { get; set; }
@@ -69,9 +71,11 @@ namespace FourIF
             //[3..66]: File name
             //[67]: Completed 4
             //[68]: Helper
+            //[69,70,71,72] : MD5
+            //[73]: A->Part Index, R->IsPasswordProtected (0 no, 1 yes)
 
-            //Data start at x = 69
-            int x = 69;
+            //Data start at x = 74
+            int x = 74;
             int y = 0;
 
             //Save version info
@@ -88,13 +92,19 @@ namespace FourIF
 
             Color[] file_name_data = StringToPixels(file_name, 256);
 
-            int last = 0;
-
             for (int i = 0; i < 64; i++)
             {
-                last = 3 + i;
                 fb.SetPixel(3 + i, 0, file_name_data[i]);
             }
+
+            byte[] md5_hash = md5(data);
+
+            fb.SetPixel(69, 0, Color.FromArgb(md5_hash[0], md5_hash[1], md5_hash[2], md5_hash[3]));
+            fb.SetPixel(70, 0, Color.FromArgb(md5_hash[4], md5_hash[5], md5_hash[6], md5_hash[7]));
+            fb.SetPixel(71, 0, Color.FromArgb(md5_hash[8], md5_hash[9], md5_hash[10], md5_hash[11]));
+            fb.SetPixel(72, 0, Color.FromArgb(md5_hash[12], md5_hash[13], md5_hash[14], md5_hash[15]));
+            //For future use
+            fb.SetPixel(73, 0, Color.FromArgb(0, 0, 0, 0));
 
             List<byte> buffer = new List<byte>(4);
 
@@ -237,14 +247,16 @@ namespace FourIF
 
             #endregion
 
-            if (FourIFEncoderVersion == 3)
+            #region FourIF version 3 or 4 decoder
+
+            if (FourIFEncoderVersion == 3 || FourIFEncoderVersion == 4)
             {
                 DecodeResult dr = new DecodeResult();
 
                 dr.Extension = PixelsToString(new Color[] { fb.GetPixel(1, 0), fb.GetPixel(2, 0) });
 
                 List<Color> file_name_buffer = new List<Color>(64);
-                for (int i = 3; i < 67; i++) 
+                for (int i = 3; i < 67; i++)
                 {
                     file_name_buffer.Add(fb.GetPixel(i, 0));
                 }
@@ -258,7 +270,29 @@ namespace FourIF
                 int prog_c = 0;
 
                 int y = 0;
+
                 int x = 69;
+
+                if (FourIFEncoderVersion == 4)
+                {
+                    x = 74;
+                    byte[] md5_hash = new byte[16];
+
+                    var a = fb.GetPixel(69, 0);
+                    md5_hash[0] = a.A; md5_hash[1] = a.R; md5_hash[2] = a.G; md5_hash[3] = a.B;
+
+                    a = fb.GetPixel(70, 0);
+                    md5_hash[4] = a.A; md5_hash[5] = a.R; md5_hash[6] = a.G; md5_hash[7] = a.B;
+
+                    a = fb.GetPixel(71, 0);
+                    md5_hash[8] = a.A; md5_hash[9] = a.R; md5_hash[10] = a.G; md5_hash[11] = a.B;
+
+                    a = fb.GetPixel(72, 0);
+                    md5_hash[12] = a.A; md5_hash[13] = a.R; md5_hash[14] = a.G; md5_hash[15] = a.B;
+
+                    dr.MD5 = byte2string(md5_hash);
+                    dr.MD5_Bytes = md5_hash;
+                }
 
                 for (prog_c = 0; prog_c != Completed4; prog_c++)
                 {
@@ -283,6 +317,7 @@ namespace FourIF
                     x++;
                 }
 
+
                 fb.UnlockImage();
 
                 im.Dispose();
@@ -293,8 +328,16 @@ namespace FourIF
                 dr.Data = temp_s.ToArray();
                 temp_s.Dispose();
 
+                if (FourIFEncoderVersion == 4) 
+                {
+                    //let's verify embedded hash
+                    byte[] a = md5(dr.Data);
+                    dr.DataValid = compare_arr(a, dr.MD5_Bytes);
+                }
+
                 return dr;
             }
+            #endregion
 
             fb.UnlockImage();
             im.Dispose();
@@ -302,6 +345,34 @@ namespace FourIF
             temp_s.Dispose();
 
             return new DecodeResult();
+        }
+
+        private bool compare_arr(byte[] a1, byte[] a2) 
+        {
+            if (a1.Length == a2.Length) 
+            {
+                for (int i = 0; i < a2.Length; i++) 
+                {
+                    if (a1[i] != a2[i]) { return false; }
+                }
+                return true;
+            }
+            return false;
+        }
+
+        private byte[] md5(byte[] data)
+        {
+            using (System.Security.Cryptography.MD5CryptoServiceProvider a = new System.Security.Cryptography.MD5CryptoServiceProvider())
+            {
+                return a.ComputeHash(data);
+            }
+        }
+
+        private string byte2string(byte[] s)
+        {
+            StringBuilder sb = new StringBuilder();
+            foreach (byte b in s) { sb.Append(b.ToString("X2")); }
+            return sb.ToString().ToLower();
         }
 
         private Color IntToColor(int i)

@@ -53,10 +53,10 @@
             // 
             // button2
             // 
-            this.button2.Location = new System.Drawing.Point(322, 192);
+            this.button2.Location = new System.Drawing.Point(99, 193);
             this.button2.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.button2.Name = "button2";
-            this.button2.Size = new System.Drawing.Size(167, 85);
+            this.button2.Size = new System.Drawing.Size(71, 59);
             this.button2.TabIndex = 3;
             this.button2.Text = "Decode file";
             this.button2.UseVisualStyleBackColor = true;
@@ -64,10 +64,10 @@
             // 
             // button1
             // 
-            this.button1.Location = new System.Drawing.Point(128, 192);
+            this.button1.Location = new System.Drawing.Point(14, 192);
             this.button1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.button1.Name = "button1";
-            this.button1.Size = new System.Drawing.Size(167, 85);
+            this.button1.Size = new System.Drawing.Size(78, 60);
             this.button1.TabIndex = 4;
             this.button1.Text = "Encode file";
             this.button1.UseVisualStyleBackColor = true;
@@ -104,7 +104,7 @@
             this.groupBox1.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.Padding = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.groupBox1.Size = new System.Drawing.Size(569, 169);
+            this.groupBox1.Size = new System.Drawing.Size(281, 169);
             this.groupBox1.TabIndex = 2;
             this.groupBox1.TabStop = false;
             this.groupBox1.Text = "Settings";
@@ -151,11 +151,12 @@
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 17F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(600, 301);
+            this.ClientSize = new System.Drawing.Size(306, 260);
             this.Controls.Add(this.button2);
             this.Controls.Add(this.button1);
             this.Controls.Add(this.groupBox1);
             this.Font = new System.Drawing.Font("Segoe UI", 9.75F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "Form1";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
